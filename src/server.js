@@ -86,7 +86,7 @@ app.delete('/api/sessions/:name', authMiddleware, (req, res) => {
   }
 });
 
-// WebSocket terminal bridge
+// WebSocket terminal bridge — accepts any path ending in /ws
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const token = url.searchParams.get('token');

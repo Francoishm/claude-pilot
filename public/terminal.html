@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#161b22">
   <title>Terminal — Claude Pilot</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
 </head>
 <body>
@@ -48,7 +48,7 @@
     if (!session || !token) window.location.href = '/';
 
     document.getElementById('sessionLabel').textContent = session;
-    document.getElementById('backBtn').onclick = () => window.location.href = '/';
+    document.getElementById('backBtn').onclick = () => window.location.href = 'index.html';
 
     const term = new Terminal({
       cursorBlink: true,
@@ -90,7 +90,9 @@
 
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(`${proto}://${location.host}/ws?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`);
+      // derive base path from current page URL so it works behind a reverse-proxy sub-path
+      const basePath = location.pathname.replace(/\/[^/]*$/, '/');
+      ws = new WebSocket(`${proto}://${location.host}${basePath}ws?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`);
 
       ws.onopen = () => {
         term.clear();

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#161b22">
   <title>Claude Pilot</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -61,7 +61,7 @@
     }
 
     async function loadSessions() {
-      const { sessions } = await api('GET', '/api/sessions');
+      const { sessions } = await api('GET', 'api/sessions');
       const list = document.getElementById('sessionList');
 
       if (!sessions.length) {
@@ -94,12 +94,12 @@
     }
 
     function openSession(name) {
-      window.location.href = `/terminal.html?session=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
+      window.location.href = `terminal.html?session=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
     }
 
     async function killSession(name) {
       if (!confirm(`Tuer la session "${name}" ?`)) return;
-      await api('DELETE', `/api/sessions/${encodeURIComponent(name)}`);
+      await api('DELETE', `api/sessions/${encodeURIComponent(name)}`);
       loadSessions();
     }
 
@@ -114,7 +114,7 @@
       const btn = document.getElementById('createBtn');
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span>';
-      const { name: created, error } = await api('POST', '/api/sessions', { name });
+      const { name: created, error } = await api('POST', 'api/sessions', { name });
       btn.disabled = false;
       btn.textContent = 'Créer';
       if (error) { alert(error); return; }
@@ -125,7 +125,7 @@
 
     document.getElementById('logoutBtn').onclick = () => {
       localStorage.removeItem('cp_token');
-      window.location.href = '/login.html';
+      window.location.href = 'login.html';
     };
 
     // Auto-refresh every 5s
