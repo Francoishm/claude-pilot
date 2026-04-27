@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#161b22">
+  <title>Claude Pilot</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>🚀 Claude Pilot</h1>
+    <div class="header-actions">
+      <button class="btn btn-success" id="newBtn">+ Session</button>
+      <button class="btn btn-ghost" id="logoutBtn">⏏</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="section-title">Sessions tmux</div>
+    <div class="session-list" id="sessionList">
+      <div class="empty-state">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- New session modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2>Nouvelle session Claude</h2>
+      <div class="field">
+        <label for="sessionName">Nom (optionnel)</label>
+        <input type="text" id="sessionName" placeholder="claude-mobile" maxlength="40">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelBtn">Annuler</button>
+        <button class="btn btn-primary" id="createBtn">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('cp_token');
+    if (!token) window.location.href = '/login.html';
+
+    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    async function api(method, path, body) {
+      const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      if (res.status === 401) { localStorage.removeItem('cp_token'); window.location.href = '/login.html'; }
+      return res.json();
+    }
+
+    function timeAgo(iso) {
+      const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (diff < 60) return `il y a ${diff}s`;
+      if (diff < 3600) return `il y a ${Math.floor(diff/60)}min`;
+      return `il y a ${Math.floor(diff/3600)}h`;
+    }
+
+    async function loadSessions() {
+      const { sessions } = await api('GET', '/api/sessions');
+      const list = document.getElementById('sessionList');
+
+      if (!sessions.length) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">💤</div>
+            <p>Aucune session active.<br>Créez-en une avec "+ Session".</p>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = sessions.map(s => `
+        <div class="session-card">
+          <div class="session-info">
+            <div class="session-name">${s.name}</div>
+            <div class="session-meta">
+              <span class="badge ${s.attached ? 'badge-attached' : 'badge-detached'}">
+                ${s.attached ? '● attachée' : '○ libre'}
+              </span>
+              <span>${s.windows} fenêtre${s.windows > 1 ? 's' : ''}</span>
+              <span>${timeAgo(s.activity)}</span>
+            </div>
+          </div>
+          <div class="session-actions">
+            <button class="btn btn-ghost" onclick="killSession('${s.name}')" title="Tuer">🗑</button>
+            <button class="btn btn-primary" onclick="openSession('${s.name}')">→</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openSession(name) {
+      window.location.href = `/terminal.html?session=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
+    }
+
+    async function killSession(name) {
+      if (!confirm(`Tuer la session "${name}" ?`)) return;
+      await api('DELETE', `/api/sessions/${encodeURIComponent(name)}`);
+      loadSessions();
+    }
+
+    // New session modal
+    const modal = document.getElementById('modal');
+    document.getElementById('newBtn').onclick = () => modal.classList.add('open');
+    document.getElementById('cancelBtn').onclick = () => modal.classList.remove('open');
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+
+    document.getElementById('createBtn').onclick = async () => {
+      const name = document.getElementById('sessionName').value.trim();
+      const btn = document.getElementById('createBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+      const { name: created, error } = await api('POST', '/api/sessions', { name });
+      btn.disabled = false;
+      btn.textContent = 'Créer';
+      if (error) { alert(error); return; }
+      modal.classList.remove('open');
+      document.getElementById('sessionName').value = '';
+      openSession(created);
+    };
+
+    document.getElementById('logoutBtn').onclick = () => {
+      localStorage.removeItem('cp_token');
+      window.location.href = '/login.html';
+    };
+
+    // Auto-refresh every 5s
+    loadSessions();
+    setInterval(loadSessions, 5000);
+  </script>
+</body>
+</html>

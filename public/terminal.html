@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#161b22">
+  <title>Terminal — Claude Pilot</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+</head>
+<body>
+  <div class="term-page">
+    <div class="term-header">
+      <button class="btn btn-ghost" id="backBtn" style="padding:8px 12px;">←</button>
+      <span class="term-session-name" id="sessionLabel"></span>
+      <button class="btn btn-ghost" id="reconnectBtn" style="padding:8px 12px;" title="Reconnecter">↺</button>
+    </div>
+
+    <div class="term-container">
+      <div id="terminal"></div>
+    </div>
+
+    <div class="term-toolbar" id="toolbar">
+      <button class="key-btn" data-key="&#x0d;">⏎ Enter</button>
+      <button class="key-btn danger" data-seq="\x03">Ctrl+C</button>
+      <button class="key-btn" data-seq="\x1b">Esc</button>
+      <button class="key-btn" data-seq="\x1b[A">↑</button>
+      <button class="key-btn" data-seq="\x1b[B">↓</button>
+      <button class="key-btn" data-seq="\x1b[D">←</button>
+      <button class="key-btn" data-seq="\x1b[C">→</button>
+      <button class="key-btn" data-seq="\x01">Ctrl+A</button>
+      <button class="key-btn" data-seq="\x05">Ctrl+E</button>
+      <button class="key-btn" data-seq="\x0b">Ctrl+K</button>
+      <button class="key-btn" data-seq="\x15">Ctrl+U</button>
+      <button class="key-btn" data-seq="\x1b\x62">Alt+←</button>
+      <button class="key-btn" data-seq="\x1b\x66">Alt+→</button>
+      <button class="key-btn" data-seq="\t">Tab</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const session = params.get('session');
+    const token = params.get('token');
+
+    if (!session || !token) window.location.href = '/';
+
+    document.getElementById('sessionLabel').textContent = session;
+    document.getElementById('backBtn').onclick = () => window.location.href = '/';
+
+    const term = new Terminal({
+      cursorBlink: true,
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+      fontSize: 13,
+      lineHeight: 1.2,
+      theme: {
+        background: '#0d1117',
+        foreground: '#e6edf3',
+        cursor: '#f78166',
+        selectionBackground: '#264f78',
+        black: '#0d1117',
+        red: '#f85149',
+        green: '#3fb950',
+        yellow: '#d29922',
+        blue: '#58a6ff',
+        magenta: '#bc8cff',
+        cyan: '#39c5cf',
+        white: '#e6edf3',
+        brightBlack: '#8b949e',
+        brightRed: '#ff7b72',
+        brightGreen: '#56d364',
+        brightYellow: '#e3b341',
+        brightBlue: '#79c0ff',
+        brightMagenta: '#d2a8ff',
+        brightCyan: '#56d4dd',
+        brightWhite: '#f0f6fc',
+      },
+      allowProposedApi: true,
+      scrollback: 5000,
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal'));
+    fitAddon.fit();
+
+    let ws;
+
+    function connect() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`);
+
+      ws.onopen = () => {
+        term.clear();
+        sendResize();
+      };
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'data') term.write(msg.data);
+        if (msg.type === 'error') term.writeln(`\r\n\x1b[31m${msg.data}\x1b[0m`);
+        if (msg.type === 'exit') term.writeln('\r\n\x1b[33m[session ended]\x1b[0m');
+      };
+
+      ws.onclose = () => {
+        term.writeln('\r\n\x1b[90m[disconnected]\x1b[0m');
+      };
+    }
+
+    function sendResize() {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+      }
+    }
+
+    function send(data) {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'input', data }));
+      }
+    }
+
+    term.onData(data => send(data));
+
+    // Toolbar keys
+    document.querySelectorAll('.key-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const seq = btn.dataset.seq;
+        const key = btn.dataset.key;
+        send(seq !== undefined ? seq : key);
+        term.focus();
+      });
+    });
+
+    // Reconnect
+    document.getElementById('reconnectBtn').onclick = () => {
+      if (ws) ws.close();
+      connect();
+    };
+
+    // Resize observer
+    const ro = new ResizeObserver(() => {
+      fitAddon.fit();
+      sendResize();
+    });
+    ro.observe(document.querySelector('.term-container'));
+
+    connect();
+    term.focus();
+  </script>
+</body>
+</html>

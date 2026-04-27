@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <title>Claude Pilot — Login</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">🚀</div>
+      <h1 class="login-title">Claude Pilot</h1>
+      <p class="login-sub">Contrôle de sessions Claude</p>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            autofocus
+          >
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          Se connecter
+        </button>
+        <div class="error-msg" id="errorMsg"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    if (localStorage.getItem('cp_token')) {
+      try {
+        const [, payload] = localStorage.getItem('cp_token').split('.');
+        const { exp } = JSON.parse(atob(payload));
+        if (Date.now() / 1000 < exp) window.location.href = '/';
+      } catch {}
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const err = document.getElementById('errorMsg');
+      const password = document.getElementById('password').value;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+      err.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        localStorage.setItem('cp_token', data.token);
+        window.location.href = '/';
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Se connecter';
+      }
+    });
+  </script>
+</body>
+</html>

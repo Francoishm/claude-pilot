@@ -1,0 +1,19 @@
+{
+  "name": "claude-pilot",
+  "version": "1.0.0",
+  "description": "Web interface to control Claude Code terminal sessions from mobile",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "setup": "node scripts/setup.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-pty": "^1.0.0",
+    "ws": "^8.17.0"
+  }
+}
