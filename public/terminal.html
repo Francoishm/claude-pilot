@@ -13,7 +13,27 @@
     <div class="term-header">
       <button class="btn btn-ghost" id="backBtn" style="padding:8px 12px;">←</button>
       <span class="term-session-name" id="sessionLabel"></span>
+      <button class="btn btn-ghost" id="historyBtn" style="padding:8px 12px;" title="Historique">📜</button>
       <button class="btn btn-ghost" id="reconnectBtn" style="padding:8px 12px;" title="Reconnecter">↺</button>
+    </div>
+
+    <!-- History overlay -->
+    <div id="historyOverlay" style="
+      display:none; position:fixed; inset:0; z-index:50;
+      background:rgba(0,0,0,0.85); flex-direction:column;
+    ">
+      <div style="
+        display:flex; align-items:center; justify-content:space-between;
+        padding:10px 14px; background:#161b22; border-bottom:1px solid #30363d; flex-shrink:0;
+      ">
+        <span style="font-weight:600; font-size:0.9rem;">📜 Historique tmux</span>
+        <button id="closeHistory" class="btn btn-ghost" style="padding:6px 12px;">✕</button>
+      </div>
+      <div id="historyContent" style="
+        flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+        padding:12px; font-family:monospace; font-size:12px; line-height:1.5;
+        white-space:pre-wrap; word-break:break-all; color:#e6edf3;
+      ">Chargement…</div>
     </div>
 
     <div class="term-container">
@@ -146,6 +166,33 @@
         term.focus();
       });
     });
+
+    // History overlay
+    const historyOverlay = document.getElementById('historyOverlay');
+    const historyContent = document.getElementById('historyContent');
+
+    document.getElementById('historyBtn').onclick = async () => {
+      historyOverlay.style.display = 'flex';
+      historyContent.textContent = 'Chargement…';
+      try {
+        const res = await fetch(`api/sessions/${encodeURIComponent(session)}/history`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const { text, error } = await res.json();
+        if (error) throw new Error(error);
+        // strip ANSI escape codes for readable plain text
+        historyContent.textContent = text.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '');
+        // scroll to bottom so latest output is visible
+        historyContent.scrollTop = historyContent.scrollHeight;
+      } catch (e) {
+        historyContent.textContent = `Erreur: ${e.message}`;
+      }
+    };
+
+    document.getElementById('closeHistory').onclick = () => {
+      historyOverlay.style.display = 'none';
+      term.focus();
+    };
 
     // Reconnect
     document.getElementById('reconnectBtn').onclick = () => {

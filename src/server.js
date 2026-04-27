@@ -76,6 +76,19 @@ app.post('/api/sessions', authMiddleware, (req, res) => {
   }
 });
 
+app.get('/api/sessions/:name/history', authMiddleware, (req, res) => {
+  const name = req.params.name.replace(/[^a-zA-Z0-9_-]/g, '');
+  try {
+    const text = execSync(
+      `tmux capture-pane -t "${name}" -S -3000 -p -e`,
+      { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 }
+    );
+    res.json({ text });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.delete('/api/sessions/:name', authMiddleware, (req, res) => {
   const name = req.params.name.replace(/[^a-zA-Z0-9_-]/g, '');
   try {
