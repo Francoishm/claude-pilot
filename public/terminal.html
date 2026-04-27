@@ -125,6 +125,18 @@
 
     term.onData(data => send(data));
 
+    // Touch scroll — xterm captures touch events by default, preventing scroll on mobile
+    let touchStartY = 0;
+    const termEl = document.getElementById('terminal');
+    termEl.addEventListener('touchstart', e => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    termEl.addEventListener('touchmove', e => {
+      const dy = touchStartY - e.touches[0].clientY;
+      touchStartY = e.touches[0].clientY;
+      term.scrollLines(Math.round(dy / 18));
+    }, { passive: true });
+
     // Toolbar keys
     document.querySelectorAll('.key-btn').forEach(btn => {
       btn.addEventListener('click', () => {
