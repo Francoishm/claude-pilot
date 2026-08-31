@@ -8,6 +8,14 @@
   "notifyOnFull": ["energy", "nerve"],
   "pollSeconds": 60,
 
+  "market": {
+    "_comment": "Scanner d'opportunites. Les objets sont listes par nom : ils sont resolus contre le catalogue Torn au lancement, aucun ID n'est code en dur.",
+    "watchlist": ["Xanax", "Feathery Hotel Coupon", "Erotic DVD"],
+    "minDiscountPercent": 12,
+    "minProfitPerUnit": 25000,
+    "maxCashPerBuy": 0
+  },
+
   "items": {
     "_comment": "Gains d'energie approximatifs, a ajuster selon ton inventaire.",
     "xanax": { "label": "Xanax", "energy": 250, "cooldown": "drug" },

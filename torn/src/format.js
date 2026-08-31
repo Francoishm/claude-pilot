@@ -90,4 +90,44 @@ function renderReport(report) {
   return lines.join('\n');
 }
 
-module.exports = { renderSnapshot, renderReport, renderBar, style };
+function money(n) {
+  return `$${Math.round(n).toLocaleString('en-US')}`;
+}
+
+function renderMarket(scan) {
+  const lines = [''];
+
+  if (scan.unresolved.length) {
+    lines.push(
+      style.yellow(`  Objets introuvables dans le catalogue Torn : ${scan.unresolved.join(', ')}`),
+      style.dim('  Corrige les noms dans torn/config/coach.json (orthographe exacte du jeu).'),
+      ''
+    );
+  }
+
+  for (const e of scan.errors) lines.push(style.red(`  ! ${e.name} : ${e.message}`));
+
+  if (scan.opportunities.length === 0) {
+    lines.push(style.dim(`  Aucune opportunite sur ${scan.scanned} objet(s) surveille(s).`), '');
+    return lines.join('\n');
+  }
+
+  lines.push(style.bold(`  ${scan.opportunities.length} opportunite(s) — a verifier puis acheter a la main`), '');
+  for (const o of scan.opportunities) {
+    lines.push(
+      `  ${style.bold(o.name)} ${style.dim(`(${o.source})`)}`,
+      `    ${money(o.cost)} vs valeur marche ${money(o.marketValue)} — ${style.green(`-${o.discountPercent}%`)}`,
+      `    ${o.affordable}/${o.quantity} unite(s) → marge estimee ${style.green(money(o.totalProfit))}`,
+      style.dim(`    https://www.torn.com/imarket.php#/p=shop&step=shop&type=&searchname=${encodeURIComponent(o.name)}`),
+      ''
+    );
+  }
+  lines.push(
+    style.dim('  Rappel : `market_value` est une moyenne glissante. Une forte remise peut'),
+    style.dim('  signaler une bonne affaire comme un prix qui vient de chuter. Verifie avant.'),
+    ''
+  );
+  return lines.join('\n');
+}
+
+module.exports = { renderSnapshot, renderReport, renderMarket, renderBar, style };

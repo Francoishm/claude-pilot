@@ -57,6 +57,62 @@ redescend.
 Un vol en cours, l'hôpital ou la prison désactivent la recommandation d'action :
 les conseils restent affichés, mais rien n'est dépensable.
 
+## Scanner de l'Item Market
+
+```bash
+npm run torn:market            # un passage sur la watchlist
+npm run torn:market -- --watch # scan toutes les 5 min avec alertes
+```
+
+Le scanner lit les annonces publiques via l'API, les compare à la valeur de
+marché de l'objet, et signale celles qui passent tes seuils — avec le lien
+direct vers l'objet sur le market. **Il n'achète rien.** L'API Torn n'expose
+aucun endpoint d'achat, et automatiser le clic en pilotant le site est un motif
+de bannissement. Le script trouve l'affaire, tu cliques.
+
+La watchlist se définit **par nom** dans `torn/config/coach.json` ; les noms sont
+résolus contre le catalogue Torn au lancement, donc aucun ID d'objet n'est codé
+en dur, et un nom mal orthographié te le dit au lieu de disparaître en silence.
+
+Deux limites à garder en tête :
+
+- `market_value` est une **moyenne glissante**. Une annonce 30 % en dessous peut
+  être une bonne affaire — ou un prix de marché qui vient de s'effondrer, auquel
+  cas la « marge » est fictive. Le scanner signale, il ne juge pas.
+- Entre l'alerte et ton clic il y a quelques secondes. Sur les objets très
+  liquides, les meilleures annonces partent avant. C'est structurel, pas un
+  défaut à corriger : la corriger reviendrait à automatiser l'achat.
+
+## Aller vite au niveau 15, légalement
+
+Les leviers réels, par ordre de rendement :
+
+1. **Ne jamais laisser une barre pleine.** C'est le point n°1 et c'est
+   précisément ce que `watch` surveille. Sur une semaine, quelques heures de
+   nerve saturée coûtent plus que n'importe quelle optimisation fine.
+2. **Nerve → crimes en continu.** Aux premiers niveaux c'est la source d'XP la
+   plus régulière et la moins risquée.
+3. **Les deux refills quotidiens.** Une barre entière d'énergie et une de nerve
+   par jour, remise à zéro chaque jour : non utilisées, elles sont perdues.
+4. **Xanax pour la sortie d'énergie**, dans la limite de ton cooldown drogue —
+   le coach affiche le cooldown réel, ne travaille pas de mémoire.
+5. **Les chaînes de faction.** Meilleur rendement XP du jeu, mais elles expirent
+   vite : le coach les met en priorité absolue tant qu'elles tiennent.
+6. **L'éducation**, en arrière-plan. Aucune énergie consommée, donc aucun
+   arbitrage à faire — un cours doit toujours tourner.
+
+Pour les chiffres (régen par tick, cooldowns, temps avant saturation), lis-les
+dans l'app : ils viennent de l'API et sont propres à ton compte.
+
+## Ce que cet outil ne fera jamais
+
+- commettre des crimes, attaquer ou s'entraîner à ta place ;
+- acheter automatiquement sur le market ;
+- exploiter un bug du jeu.
+
+Ces trois choses sont interdites par les règles de Torn et sanctionnées par un
+bannissement, généralement définitif. Un compte banni ne monte plus de niveau.
+
 ## Réglages
 
 `torn/config/coach.json` — seuils d'alerte, fréquence, barres à surveiller,
