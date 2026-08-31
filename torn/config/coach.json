@@ -8,6 +8,13 @@
   "notifyOnFull": ["energy", "nerve"],
   "pollSeconds": 60,
 
+  "leveling": {
+    "_comment": "Reperes de leveling. `attacksToLevel15` est un repere COMMUNAUTAIRE, pas une constante du jeu : l'XP est cachee par design et aucune table officielle n'existe. A traiter comme un ordre de grandeur.",
+    "attacksToLevel15": 125,
+    "minTargetLevel": 30,
+    "maxEnrichLookups": 25
+  },
+
   "market": {
     "_comment": "Scanner d'opportunites. Les objets sont listes par nom : ils sont resolus contre le catalogue Torn au lancement, aucun ID n'est code en dur.",
     "watchlist": ["Xanax", "Feathery Hotel Coupon", "Erotic DVD"],

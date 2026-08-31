@@ -130,4 +130,52 @@ function renderMarket(scan) {
   return lines.join('\n');
 }
 
-module.exports = { renderSnapshot, renderReport, renderMarket, renderBar, style };
+function renderAttacks(analysis) {
+  const { summary, advice } = analysis;
+  const lines = [''];
+
+  if (summary.total === 0) {
+    lines.push(style.dim('  Aucune attaque dans le journal sur la periode demandee.'), '');
+    return lines.join('\n');
+  }
+
+  const span = summary.from && summary.to ? formatSeconds((summary.to - summary.from) / 1000) : '?';
+  lines.push(style.bold(`  ${summary.total} attaque(s) sur ${span}`), '');
+  lines.push(
+    `  Laissees sur place : ${style.green(summary.counts.leave)}   ${style.dim('(XP maximale)')}`,
+    `  Volees             : ${summary.counts.mug > 0 ? style.yellow(summary.counts.mug) : summary.counts.mug}   ${style.dim('(XP reduite)')}`,
+    `  Hospitalisees      : ${summary.counts.hosp > 0 ? style.yellow(summary.counts.hosp) : summary.counts.hosp}   ${style.dim('(XP reduite)')}`,
+    `  Perdues            : ${summary.counts.loss > 0 ? style.red(summary.counts.loss) : summary.counts.loss}`
+  );
+
+  if (summary.leaveRatio !== null) {
+    const pct = Math.round(summary.leaveRatio * 100);
+    const color = pct >= 90 ? style.green : pct >= 60 ? style.yellow : style.red;
+    lines.push('', `  Efficacite XP des victoires : ${color(pct + '%')} ${style.dim('conclues de facon optimale')}`);
+  }
+  if (summary.averageDefenderLevel !== null) {
+    lines.push(
+      `  Niveau moyen des cibles     : ${summary.averageDefenderLevel} ${style.dim(`(sur ${summary.defenderLevelsKnown} connue(s))`)}`
+    );
+  }
+  lines.push(`  Respect gagne               : ${summary.respect}`);
+
+  if (advice.length) {
+    lines.push('');
+    for (const a of advice) {
+      lines.push(`  ${style.cyan('▶')} ${style.bold(a.title)}`);
+      lines.push(`    ${style.dim(a.detail)}`);
+    }
+  }
+
+  lines.push(
+    '',
+    style.dim('  L’XP est cachee par design dans Torn : aucun outil ne peut te donner le'),
+    style.dim('  nombre exact d’attaques restantes. Ce qui precede mesure la *qualite* de'),
+    style.dim('  tes attaques, ce qui est la seule variable que tu controles.'),
+    ''
+  );
+  return lines.join('\n');
+}
+
+module.exports = { renderSnapshot, renderReport, renderMarket, renderAttacks, renderBar, style };

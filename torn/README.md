@@ -83,6 +83,47 @@ Deux limites à garder en tête :
   liquides, les meilleures annonces partent avant. C'est structurel, pas un
   défaut à corriger : la corriger reviendrait à automatiser l'achat.
 
+## Combien de joueurs battre pour le niveau 15 ?
+
+**Personne ne peut te donner le chiffre exact, et ce n'est pas une limite de cet
+outil.** L'expérience est *cachée par design* dans Torn : aucune table d'XP par
+niveau n'est publiée, et l'API n'expose aucun champ d'expérience. Le seul moyen
+de voir ta progression est la Fortune Teller, en Chine — donc inaccessible avant
+le niveau 15, puisque le voyage se débloque précisément à ce niveau.
+
+Ce qu'on sait, en revanche :
+
+- **Repère communautaire : ~125 attaques** sur des cibles de leveling correctes.
+  C'est un ordre de grandeur, pas une garantie.
+- **L'XP d'une attaque dépend du NIVEAU de la cible, pas de ses stats.** D'où la
+  stratégie : viser des joueurs de *haut niveau mais faibles en combat*
+  (« leveling targets »).
+- **L'issue change tout : laisser sur place > voler > hospitaliser.** Laisser
+  donne l'XP maximale ; voler tombe autour de 55-60 %. Hospitaliser une cible
+  partagée la bloque en plus pour les autres joueurs.
+- Les crimes, la gym, le travail et certains company specials donnent aussi de
+  l'XP — l'attaque n'est pas la seule source.
+- Ordres de grandeur observés : 1 à 3 jours avec de l'aide financière, une
+  dizaine de jours en jouant sérieusement, plus longtemps en énergie naturelle.
+
+### `attacks` — mesurer ce que tu contrôles
+
+```bash
+npm run torn:attacks                    # 7 derniers jours
+npm run torn:attacks -- --since 30      # 30 jours
+npm run torn:attacks -- --enrich        # + niveau réel des cibles (1 appel API par joueur)
+```
+
+Puisque l'XP est cachée, la commande ne prétend pas compter tes XP. Elle mesure
+la **qualité** de tes attaques, qui est la vraie variable d'optimisation :
+
+- combien de victoires laissées sur place vs volées/hospitalisées (efficacité XP) ;
+- le niveau moyen de tes cibles, pour vérifier que tu vises assez haut ;
+- ta position vis-à-vis du repère des ~125 attaques.
+
+`--enrich` va chercher le niveau des défenseurs profil par profil, plafonné par
+`maxEnrichLookups` pour ne pas transformer une analyse en centaines de requêtes.
+
 ## Aller vite au niveau 15, légalement
 
 Les leviers réels, par ordre de rendement :
@@ -100,6 +141,19 @@ Les leviers réels, par ordre de rendement :
    vite : le coach les met en priorité absolue tant qu'elles tiennent.
 6. **L'éducation**, en arrière-plan. Aucune énergie consommée, donc aucun
    arbitrage à faire — un cours doit toujours tourner.
+
+Et l'erreur la plus coûteuse, parce qu'elle est invisible : **gagner un combat
+puis le conclure en vol ou en hospitalisation**. L'énergie est dépensée en
+entier, l'XP arrive amputée. C'est exactement ce que `attacks` détecte.
+
+### Sources
+
+- [Level and Ranks — wiki officiel](https://wiki.torn.com/wiki/Level_and_Ranks)
+- [FAQ — wiki officiel](https://wiki.torn.com/wiki/FAQ) (l'XP est cachée)
+- [Getting to Level 15 — FFScouter](https://ffscouter.com/guides/level-15)
+- [Leveling Guide — TornW3B](https://www.weav3r.dev/guides/leveling)
+- [GET TO LEVEL 15 as fast as possible — TornStats](https://www.tornstats.com/guides/show/35)
+- [Level 15 Guide — TC Essentials](https://tc-essentials.oran.pw/docs/prologue/level15/)
 
 Pour les chiffres (régen par tick, cooldowns, temps avant saturation), lis-les
 dans l'app : ils viennent de l'API et sont propres à ton compte.

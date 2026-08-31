@@ -2,8 +2,9 @@
 'use strict';
 
 const { Coach, readConfig, loadEnv } = require('./coach');
-const { renderSnapshot, renderReport, renderMarket, style } = require('./format');
+const { renderSnapshot, renderReport, renderMarket, renderAttacks, style } = require('./format');
 const { MarketScanner } = require('./market');
+const { AttackAnalyzer } = require('./attacks');
 const { advise, DEFAULT_CONFIG } = require('./advisor');
 const { Tracker } = require('./tracker');
 
@@ -13,6 +14,8 @@ const USAGE = `
     status            Etat actuel des barres + action recommandee
     watch [--every N] Surveillance continue, alerte quand une barre est pleine
     market [--watch]  Scanne l'item market et signale les annonces sous-cotees
+    attacks [--since D] [--enrich]
+                      Analyse tes attaques : issues, niveau des cibles, efficacite XP
     report [--since D] Statistiques de gaspillage (D = nombre de jours, defaut 7)
     help              Cette aide
 
@@ -41,6 +44,17 @@ async function main(argv = process.argv.slice(2)) {
   if (command === 'status') {
     const { snapshot, result } = await coach.poll({ record: true });
     process.stdout.write(renderSnapshot(snapshot, result));
+    return 0;
+  }
+
+  if (command === 'attacks') {
+    const days = Number(flag(rest, '--since') ?? 7);
+    const analyzer = new AttackAnalyzer(coach.api);
+    const analysis = await analyzer.analyze({
+      sinceMs: Date.now() - days * 24 * 3600 * 1000,
+      enrich: rest.includes('--enrich'),
+    });
+    process.stdout.write(renderAttacks(analysis));
     return 0;
   }
 
