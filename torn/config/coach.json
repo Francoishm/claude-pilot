@@ -1,0 +1,16 @@
+{
+  "_comment": "Reglages du coach. Modifie librement : rien ici n'est fige.",
+
+  "wasteWarningRatio": 0.9,
+  "overflowWarningSeconds": 900,
+  "happyFloorForGym": 0.25,
+
+  "notifyOnFull": ["energy", "nerve"],
+  "pollSeconds": 60,
+
+  "items": {
+    "_comment": "Gains d'energie approximatifs, a ajuster selon ton inventaire.",
+    "xanax": { "label": "Xanax", "energy": 250, "cooldown": "drug" },
+    "energyDrink": { "label": "Boisson energisante", "energy": 20, "cooldown": "booster" }
+  }
+}

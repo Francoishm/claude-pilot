@@ -6,7 +6,12 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "setup": "node scripts/setup.js"
+    "setup": "node scripts/setup.js",
+    "test": "node --test torn/test/*.test.js",
+    "torn": "node torn/src/cli.js",
+    "torn:watch": "node torn/src/cli.js watch",
+    "torn:report": "node torn/src/cli.js report",
+    "torn:dashboard": "node torn/src/dashboard.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
