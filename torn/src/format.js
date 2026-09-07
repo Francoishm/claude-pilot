@@ -192,10 +192,10 @@ function renderTargets(result, cfg) {
     return lines.join('\n');
   }
 
-  lines.push(
-    style.bold(`  ${result.targets.length} cible(s) — niveau >= ${cfg.minLevel}, stats estimees <= ${cfg.maxStats}`),
-    ''
-  );
+  const criteria = [`niveau >= ${cfg.minLevel}`, `stats estimees <= ${cfg.maxStats}`];
+  if (cfg.ranks?.length) criteria.push(`rang ${cfg.ranks.join('/')}`);
+  if (cfg.maxIdleDays !== null && cfg.maxIdleDays !== undefined) criteria.push(`vu il y a <= ${cfg.maxIdleDays}j`);
+  lines.push(style.bold(`  ${result.targets.length} cible(s) — ${criteria.join(', ')}`), '');
 
   for (const t of result.targets) {
     const level = t.level === null ? '?' : t.level;
@@ -205,6 +205,7 @@ function renderTargets(result, cfg) {
 
     const meta = [];
     if (t.rank) meta.push(`rang ${t.rank}`);
+    if (t.state && t.state !== 'Okay') meta.push(`statut ${t.state}`);
     if (t.lastActionDays !== null) meta.push(`vu il y a ${t.lastActionDays}j`);
     meta.push(t.faction ? `faction ${t.faction}` : 'sans faction');
     if (t.fairFight !== null) meta.push(`FF max ${t.fairFight}`);

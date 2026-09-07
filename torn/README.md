@@ -142,9 +142,26 @@ DefenderStats ≈ DefenderScore² / 4        (si la cible est équilibrée)
 
 ```bash
 npm run torn:targets                              # seuils par défaut : niveau ≥ 20, stats ≤ 400
-npm run torn:targets -- --min-level 30 --max-stats 250
+npm run torn:targets -- --min-level 41 --rank beginner
+npm run torn:targets -- --max-idle 180            # écarter les comptes trop dormants
 npm run torn:targets -- --ids 1234567,2345678     # évaluer des IDs d'une liste communautaire
 ```
+
+Les cibles sortent **triées par niveau décroissant** — l'XP suit le niveau de la
+cible, donc le haut de liste est le meilleur rendement.
+
+Deux filtres méritent une explication :
+
+- `--rank beginner` exploite le fait que le rang dérive du **niveau, des crimes,
+  du networth et des stats**. Un « Beginner » au niveau 60 a donc déclenché ses
+  paliers de niveau sans jamais déclencher ceux de stats : c'est un compte
+  abandonné ou volontairement faible. C'est le meilleur signal disponible en
+  données publiques.
+- Les comptes en **prison fédérale sont toujours exclus**, sans option pour les
+  réintégrer : `status.state == "Federal"` signifie un bannissement, et un compte
+  banni ne peut être attaqué par personne. Beaucoup de comptes « haut niveau,
+  rang bas » sont précisément des bots qui se sont fait attraper — les filtrer
+  évite de perdre de l'énergie sur des cibles injoignables.
 
 Trois limites, toutes appliquées dans le code plutôt que passées sous silence :
 
@@ -165,6 +182,12 @@ avec ton propre historique.
 Ce que cet outil ne fait **pas** : énumérer la base joueurs en itérant sur les
 identifiants. À 60 requêtes/minute cela représente des années de requêtes pour
 des millions de comptes, et c'est un usage abusif de l'API.
+
+**Il n'existe pas d'endpoint de recherche de joueurs dans l'API Torn.** On ne
+peut pas demander « rang Beginner et niveau > 40 » : la seule approche serait de
+paginer le Hall of Fame puis d'appeler un profil par candidat, soit des milliers
+de requêtes pour faire remonter une poignée de comptes dormants. C'est exactement
+le travail que les listes communautaires ont déjà fait une fois pour toutes.
 
 Deux remarques pratiques : une cible **sans faction et inactive depuis
 longtemps** ne ripostera pas, contrairement à un membre actif d'une faction

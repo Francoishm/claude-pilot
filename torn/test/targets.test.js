@@ -125,6 +125,7 @@ function fakeApi({ stats, attacks = {}, profiles = {} }) {
   const nowSec = Math.floor(Date.now() / 1000);
   return {
     calls,
+    states: {},
     async get(section, selections = []) {
       calls.push(`${section}:${selections.join(',')}`);
       if (section === 'user' && selections.includes('battlestats')) return stats;
@@ -139,6 +140,7 @@ function fakeApi({ stats, attacks = {}, profiles = {} }) {
         rank: p.rank,
         last_action: { timestamp: nowSec - (p.idleDays ?? 0) * 86400 },
         faction: p.faction ? { faction_name: p.faction } : {},
+        status: { state: this?.states?.[id] ?? p.state ?? 'Okay' },
       };
     },
   };
@@ -220,4 +222,74 @@ test('le nombre de profils consultes est plafonne', async () => {
 test('des battle stats illisibles produisent une erreur explicite', async () => {
   const api = fakeApi({ stats: {}, attacks: {} });
   await assert.rejects(() => new TargetFinder(api, CFG).find(), /battlestats/);
+});
+
+test('un compte en prison federale est toujours ecarte : il est inattaquable', () => {
+  const cfg = { ...CFG, excludeStates: ['Federal'] };
+  const { kept, rejected } = filterTargets(
+    [
+      { id: 1, level: 55, stats: 200, state: 'Federal', rank: 'Beginner' },
+      { id: 2, level: 45, stats: 200, state: 'Okay', rank: 'Beginner' },
+    ],
+    cfg
+  );
+  assert.deepEqual(kept.map((t) => t.id), [2]);
+  assert.match(rejected[0].reason, /Federal/);
+});
+
+test('le filtre de rang retient les rangs demandes, quelle que soit la casse', () => {
+  const cfg = { ...CFG, ranks: ['beginner'] };
+  const { kept } = filterTargets(
+    [
+      { id: 1, level: 55, stats: null, rank: 'Absolute beginner', state: 'Okay' },
+      { id: 2, level: 50, stats: null, rank: 'Beginner', state: 'Okay' },
+      { id: 3, level: 60, stats: null, rank: 'Elite', state: 'Okay' },
+      { id: 4, level: 48, stats: null, rank: null, state: 'Okay' },
+    ],
+    cfg
+  );
+  assert.deepEqual(kept.map((t) => t.id), [1, 2], 'rang inconnu exclu quand un filtre est demande');
+});
+
+test('sans filtre de rang, aucune cible n’est ecartee sur ce critere', () => {
+  const { kept } = filterTargets([{ id: 1, level: 50, stats: null, rank: 'Elite', state: 'Okay' }], CFG);
+  assert.equal(kept.length, 1);
+});
+
+test('maxIdleDays ecarte les comptes trop anciennement actifs', () => {
+  const cfg = { ...CFG, maxIdleDays: 90 };
+  const { kept, rejected } = filterTargets(
+    [
+      { id: 1, level: 50, stats: null, lastActionDays: 400, state: 'Okay' },
+      { id: 2, level: 45, stats: null, lastActionDays: 10, state: 'Okay' },
+      { id: 3, level: 44, stats: null, lastActionDays: null, state: 'Okay' },
+    ],
+    cfg
+  );
+  assert.deepEqual(kept.map((t) => t.id), [2, 3], 'une inactivite inconnue ne disqualifie pas');
+  assert.match(rejected[0].reason, /inactif depuis 400j/);
+});
+
+test('la requete complete : niveau > 40, rang Beginner, hors prison federale', async () => {
+  const api = fakeApi({
+    stats: MY_STATS,
+    attacks: { a: attack(11, 1.3), b: attack(12, 1.3), c: attack(13, 1.3), d: attack(14, 1.3) },
+    profiles: {
+      11: { name: 'Dormant', level: 62, rank: 'Beginner' },
+      12: { name: 'Fedde', level: 71, rank: 'Beginner' },
+      13: { name: 'Costaud', level: 55, rank: 'Elite' },
+      14: { name: 'TropBas', level: 25, rank: 'Beginner' },
+    },
+  });
+  api.states = { 12: 'Federal' };
+
+  const result = await new TargetFinder(api, {
+    ...CFG,
+    minLevel: 41,
+    ranks: ['beginner'],
+    excludeStates: ['Federal'],
+  }).find();
+
+  assert.deepEqual(result.targets.map((t) => t.name), ['Dormant']);
+  assert.ok(result.rejected.some((r) => /Federal/.test(r.reason)), 'le compte fedde est ecarte');
 });

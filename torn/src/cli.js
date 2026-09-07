@@ -17,8 +17,9 @@ const USAGE = `
     market [--watch]  Scanne l'item market et signale les annonces sous-cotees
     attacks [--since D] [--enrich]
                       Analyse tes attaques : issues, niveau des cibles, efficacite XP
-    targets [--min-level N] [--max-stats N] [--ids 1,2,3]
-                      Estime les stats des joueurs deja attaques et filtre les cibles
+    targets [--min-level N] [--max-stats N] [--rank R] [--max-idle N] [--ids 1,2,3]
+                      Cibles triees par niveau decroissant. Les comptes en prison
+                      federale sont toujours exclus : ils sont inattaquables.
     report [--since D] Statistiques de gaspillage (D = nombre de jours, defaut 7)
     help              Cette aide
 
@@ -56,6 +57,10 @@ async function main(argv = process.argv.slice(2)) {
     const maxStats = flag(rest, '--max-stats');
     if (minLevel !== undefined) overrides.minLevel = Number(minLevel);
     if (maxStats !== undefined) overrides.maxStats = Number(maxStats);
+    const rank = flag(rest, '--rank');
+    if (rank !== undefined) overrides.ranks = rank.split(',').map((r) => r.trim()).filter(Boolean);
+    const maxIdle = flag(rest, '--max-idle');
+    if (maxIdle !== undefined) overrides.maxIdleDays = Number(maxIdle);
 
     const finder = new TargetFinder(coach.api, overrides);
     const extraIds = (flag(rest, '--ids') ?? '')

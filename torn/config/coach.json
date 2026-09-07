@@ -12,7 +12,10 @@
     "_comment": "Selection de cibles. Les stats d'autrui sont PRIVEES : `maxStats` filtre une ESTIMATION deduite du Fair Fight, et cette estimation suppose une cible equilibree — c'est donc un plancher, pas une mesure.",
     "minLevel": 20,
     "maxStats": 400,
-    "maxLookups": 25
+    "maxLookups": 25,
+    "excludeStates": ["Federal"],
+    "ranks": [],
+    "maxIdleDays": null
   },
 
   "leveling": {

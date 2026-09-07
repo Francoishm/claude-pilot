@@ -114,6 +114,9 @@ function candidatesFromAttacks(rawAttacks, myId) {
 function filterTargets(candidates, cfg) {
   const minLevel = cfg.minLevel ?? 0;
   const maxStats = cfg.maxStats ?? Infinity;
+  const excludedStates = (cfg.excludeStates ?? []).map((s) => s.toLowerCase());
+  const wantedRanks = (cfg.ranks ?? []).map((r) => r.toLowerCase());
+  const maxIdleDays = cfg.maxIdleDays ?? null;
 
   const kept = [];
   const rejected = [];
@@ -121,6 +124,24 @@ function filterTargets(candidates, cfg) {
   for (const c of candidates) {
     if (c.level !== null && c.level < minLevel) {
       rejected.push({ ...c, reason: `niveau ${c.level} < ${minLevel}` });
+      continue;
+    }
+    // Un compte en prison federale est banni : inattaquable, jamais une cible.
+    if (c.state && excludedStates.includes(c.state.toLowerCase())) {
+      rejected.push({ ...c, reason: `statut ${c.state} — inattaquable` });
+      continue;
+    }
+    // Le rang derive du niveau, des crimes, du networth et des stats : un rang
+    // bas a niveau eleve trahit des stats minimales.
+    if (wantedRanks.length > 0) {
+      const rank = (c.rank ?? '').toLowerCase();
+      if (!rank || !wantedRanks.some((r) => rank.includes(r))) {
+        rejected.push({ ...c, reason: `rang "${c.rank ?? 'inconnu'}" hors filtre` });
+        continue;
+      }
+    }
+    if (maxIdleDays !== null && c.lastActionDays !== null && c.lastActionDays > maxIdleDays) {
+      rejected.push({ ...c, reason: `inactif depuis ${c.lastActionDays}j` });
       continue;
     }
     if (c.stats !== null && c.stats > maxStats) {
@@ -157,6 +178,8 @@ class TargetFinder {
         ? Math.floor((Date.now() / 1000 - Number(p.last_action.timestamp)) / 86400)
         : null,
       faction: p?.faction?.faction_name || null,
+      // "Federal" = compte banni : injoignable, il ne peut pas etre attaque.
+      state: p?.status?.state ?? null,
     };
   }
 
@@ -196,6 +219,7 @@ class TargetFinder {
         rank: profile.rank ?? null,
         lastActionDays: profile.lastActionDays ?? null,
         faction: profile.faction ?? null,
+        state: profile.state ?? null,
         stats: estimate?.resolved ? estimate.stats : null,
         // FF au plancher : la cible est mesurablement plus faible que moi.
         belowResolution: estimate ? !estimate.resolved : false,
