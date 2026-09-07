@@ -178,4 +178,52 @@ function renderAttacks(analysis) {
   return lines.join('\n');
 }
 
-module.exports = { renderSnapshot, renderReport, renderMarket, renderAttacks, renderBar, style };
+function renderTargets(result, cfg) {
+  const lines = ['', style.dim(`  Ton Battle Stat Score : ${result.attackScore}`), ''];
+
+  if (result.targets.length === 0) {
+    lines.push(
+      style.yellow(`  Aucune cible retenue sur ${result.inspected} joueur(s) examine(s).`),
+      style.dim('  Le Fair Fight n’existe que pour les joueurs que tu as deja attaques :'),
+      style.dim('  sans historique, il n’y a rien a estimer. Vois le README pour les listes'),
+      style.dim('  communautaires, puis relance avec --ids 123,456.'),
+      ''
+    );
+    return lines.join('\n');
+  }
+
+  lines.push(
+    style.bold(`  ${result.targets.length} cible(s) — niveau >= ${cfg.minLevel}, stats estimees <= ${cfg.maxStats}`),
+    ''
+  );
+
+  for (const t of result.targets) {
+    const level = t.level === null ? '?' : t.level;
+    const stats = t.stats !== null ? `~${t.stats} stats` : t.belowResolution ? 'sous le seuil de mesure' : 'stats inconnues';
+    const statColor = t.stats !== null && t.stats <= cfg.maxStats ? style.green : style.dim;
+    lines.push(`  ${style.bold(t.name ?? `#${t.id}`)} ${style.dim(`[${t.id}]`)} — niveau ${level}, ${statColor(stats)}`);
+
+    const meta = [];
+    if (t.rank) meta.push(`rang ${t.rank}`);
+    if (t.lastActionDays !== null) meta.push(`vu il y a ${t.lastActionDays}j`);
+    meta.push(t.faction ? `faction ${t.faction}` : 'sans faction');
+    if (t.fairFight !== null) meta.push(`FF max ${t.fairFight}`);
+    lines.push(style.dim(`    ${meta.join(' · ')}`));
+    lines.push(style.dim(`    https://www.torn.com/profiles.php?XID=${t.id}`));
+    lines.push('');
+  }
+
+  if (result.truncated) {
+    lines.push(style.yellow(`  Liste tronquee a ${result.inspected} profils (maxLookups).`), '');
+  }
+
+  lines.push(
+    style.dim('  L’estimation suppose une cible equilibree : une cible desequilibree a PLUS'),
+    style.dim('  de stats totales pour le meme score. Traite ces chiffres comme un plancher,'),
+    style.dim('  et une faction active comme un risque de rétorsion.'),
+    ''
+  );
+  return lines.join('\n');
+}
+
+module.exports = { renderSnapshot, renderReport, renderMarket, renderAttacks, renderTargets, renderBar, style };

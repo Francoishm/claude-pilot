@@ -124,6 +124,53 @@ la **qualité** de tes attaques, qui est la vraie variable d'optimisation :
 `--enrich` va chercher le niveau des défenseurs profil par profil, plafonné par
 `maxEnrichLookups` pour ne pas transformer une analyse en centaines de requêtes.
 
+## Trouver des cibles (niveau élevé, stats faibles)
+
+**Les battle stats d'autrui sont des données privées.** Aucune clé API, quel que
+soit son niveau d'accès, ne les expose — c'est une garantie du jeu, pas une
+limite de cet outil. Il n'existe donc aucun moyen de demander « les comptes
+niveau 20+ sous 400 stats ».
+
+Ce qui est mesurable, c'est le **Fair Fight** renvoyé après chaque attaque : il
+dépend du rapport de force, donc il se renverse.
+
+```
+BSS            = somme des racines carrées des 4 stats, arrondie
+DefenderScore  = (FF − 1) × 3/8 × AttackerScore
+DefenderStats ≈ DefenderScore² / 4        (si la cible est équilibrée)
+```
+
+```bash
+npm run torn:targets                              # seuils par défaut : niveau ≥ 20, stats ≤ 400
+npm run torn:targets -- --min-level 30 --max-stats 250
+npm run torn:targets -- --ids 1234567,2345678     # évaluer des IDs d'une liste communautaire
+```
+
+Trois limites, toutes appliquées dans le code plutôt que passées sous silence :
+
+- **Le Fair Fight n'existe que pour les joueurs que tu as déjà attaqués.** Cet
+  outil lit ton historique, il n'explore pas la base joueurs. Sans historique, il
+  ne renvoie rien — et le dit.
+- **L'estimation suppose une cible équilibrée.** Une cible déséquilibrée a *plus*
+  de stats totales pour le même score : traite le chiffre comme un plancher.
+- **FF plafonne par le bas à 1.** À FF = 1 la cible est simplement « beaucoup
+  plus faible que toi » : affiché comme *sous le seuil de mesure*, pas comme 0.
+
+Pour découvrir des cibles que tu n'as jamais attaquées, utilise les pools
+communautaires — [FFScouter Target Finder](https://ffscouter.com/guides/target-finder)
+filtre exactement sur niveau / estimation de stats / dernière activité, à partir
+d'estimations FF mutualisées — puis passe les IDs à `--ids` pour les vérifier
+avec ton propre historique.
+
+Ce que cet outil ne fait **pas** : énumérer la base joueurs en itérant sur les
+identifiants. À 60 requêtes/minute cela représente des années de requêtes pour
+des millions de comptes, et c'est un usage abusif de l'API.
+
+Deux remarques pratiques : une cible **sans faction et inactive depuis
+longtemps** ne ripostera pas, contrairement à un membre actif d'une faction
+organisée ; et un **rang bas pour un niveau élevé** est un bon signal, le rang
+étant dérivé du niveau, des crimes, du networth et des stats.
+
 ## Aller vite au niveau 15, légalement
 
 Les leviers réels, par ordre de rendement :
@@ -154,6 +201,10 @@ entier, l'XP arrive amputée. C'est exactement ce que `attacks` détecte.
 - [Leveling Guide — TornW3B](https://www.weav3r.dev/guides/leveling)
 - [GET TO LEVEL 15 as fast as possible — TornStats](https://www.tornstats.com/guides/show/35)
 - [Level 15 Guide — TC Essentials](https://tc-essentials.oran.pw/docs/prologue/level15/)
+- [Fair Fight Explained — FFScouter](https://ffscouter.com/guides/fair-fight-explained)
+- [Estimating opponent's stats from attacks — forums Torn](https://www.torn.com/forums.php?p=threads&f=61&t=16209964)
+- [Rank — wiki officiel](https://wiki.torn.com/wiki/Rank)
+- [API key levels and safety — FFScouter](https://ffscouter.com/guides/api-keys) (les battle stats d'autrui sont privées)
 
 Pour les chiffres (régen par tick, cooldowns, temps avant saturation), lis-les
 dans l'app : ils viennent de l'API et sont propres à ton compte.

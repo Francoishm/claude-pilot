@@ -2,7 +2,8 @@
 'use strict';
 
 const { Coach, readConfig, loadEnv } = require('./coach');
-const { renderSnapshot, renderReport, renderMarket, renderAttacks, style } = require('./format');
+const { renderSnapshot, renderReport, renderMarket, renderAttacks, renderTargets, style } = require('./format');
+const { TargetFinder } = require('./targets');
 const { MarketScanner } = require('./market');
 const { AttackAnalyzer } = require('./attacks');
 const { advise, DEFAULT_CONFIG } = require('./advisor');
@@ -16,6 +17,8 @@ const USAGE = `
     market [--watch]  Scanne l'item market et signale les annonces sous-cotees
     attacks [--since D] [--enrich]
                       Analyse tes attaques : issues, niveau des cibles, efficacite XP
+    targets [--min-level N] [--max-stats N] [--ids 1,2,3]
+                      Estime les stats des joueurs deja attaques et filtre les cibles
     report [--since D] Statistiques de gaspillage (D = nombre de jours, defaut 7)
     help              Cette aide
 
@@ -44,6 +47,23 @@ async function main(argv = process.argv.slice(2)) {
   if (command === 'status') {
     const { snapshot, result } = await coach.poll({ record: true });
     process.stdout.write(renderSnapshot(snapshot, result));
+    return 0;
+  }
+
+  if (command === 'targets') {
+    const overrides = {};
+    const minLevel = flag(rest, '--min-level');
+    const maxStats = flag(rest, '--max-stats');
+    if (minLevel !== undefined) overrides.minLevel = Number(minLevel);
+    if (maxStats !== undefined) overrides.maxStats = Number(maxStats);
+
+    const finder = new TargetFinder(coach.api, overrides);
+    const extraIds = (flag(rest, '--ids') ?? '')
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n) && n > 0);
+
+    process.stdout.write(renderTargets(await finder.find({ extraIds }), finder.config));
     return 0;
   }
 
