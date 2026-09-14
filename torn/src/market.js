@@ -49,12 +49,24 @@ function findOpportunity(item, listings, cfg) {
   const best = sorted[0];
   if (!best) return null;
 
-  const profitPerUnit = item.marketValue - best.cost;
-  if (profitPerUnit <= 0) return null;
+  // Remise brute : ce que l'annonce affiche par rapport a la valeur de marche.
+  const grossProfitPerUnit = item.marketValue - best.cost;
+  if (grossProfitPerUnit <= 0) return null;
 
-  const discountPercent = (profitPerUnit / item.marketValue) * 100;
+  const discountPercent = (grossProfitPerUnit / item.marketValue) * 100;
   if (discountPercent < (cfg.minDiscountPercent ?? 0)) return null;
+
+  // Marge nette : prix de revente vise, moins la taxe de vente prelevee par le
+  // jeu au moment de la transaction. C'est le seul chiffre qui finit en poche.
+  const undercut = cfg.sellUndercutPercent ?? 0;
+  const salePrice = item.marketValue * (1 - undercut / 100);
+  const netProceeds = salePrice * (1 - (cfg.salesFeePercent ?? 0) / 100);
+  const profitPerUnit = netProceeds - best.cost;
+  if (profitPerUnit <= 0) return null;
   if (profitPerUnit < (cfg.minProfitPerUnit ?? 0)) return null;
+
+  const netMarginPercent = (profitPerUnit / best.cost) * 100;
+  if (netMarginPercent < (cfg.minNetMarginPercent ?? 0)) return null;
 
   // Combien d'unites la tresorerie autorise, si une limite est fixee.
   const budget = cfg.maxCashPerBuy || 0;
@@ -69,9 +81,12 @@ function findOpportunity(item, listings, cfg) {
     quantity: best.quantity,
     affordable,
     source: best.source,
-    profitPerUnit,
-    totalProfit: profitPerUnit * affordable,
+    profitPerUnit: Math.round(profitPerUnit),
+    grossProfitPerUnit,
+    totalProfit: Math.round(profitPerUnit * affordable),
+    salePrice: Math.round(salePrice),
     discountPercent: Math.round(discountPercent * 10) / 10,
+    netMarginPercent: Math.round(netMarginPercent * 10) / 10,
   };
 }
 

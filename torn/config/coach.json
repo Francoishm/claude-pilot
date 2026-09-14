@@ -30,7 +30,24 @@
     "watchlist": ["Xanax", "Feathery Hotel Coupon", "Erotic DVD"],
     "minDiscountPercent": 12,
     "minProfitPerUnit": 25000,
-    "maxCashPerBuy": 0
+    "maxCashPerBuy": 0,
+
+    "_fees": "Taxe de vente prelevee par le jeu sur l'Item Market (5% depuis juin 2025). `sellUndercutPercent` modelise le fait qu'il faut souvent passer sous la valeur de marche pour revendre vite.",
+    "salesFeePercent": 5,
+    "sellUndercutPercent": 0
+  },
+
+  "sweep": {
+    "_comment": "Balayage complet du catalogue. Il n'existe pas d'endpoint bulk : une requete par objet, donc un cycle complet prend plusieurs minutes. `minMarketValue` limite le balayage aux objets ou une marge vaut le detour.",
+    "minDiscountPercent": 20,
+    "minNetMarginPercent": 10,
+    "minMarketValue": 50000,
+    "minProfitPerUnit": 10000,
+    "maxCashPerBuy": 0,
+    "salesFeePercent": 5,
+    "sellUndercutPercent": 0,
+    "staleSeconds": 1800,
+    "maxItems": 0
   },
 
   "items": {

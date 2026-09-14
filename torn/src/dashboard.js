@@ -11,12 +11,13 @@
 const express = require('express');
 const path = require('path');
 const { Coach, readConfig, loadEnv } = require('./coach');
+const { MarketSweeper } = require('./sweep');
 
 // Cache court : le dashboard peut etre ouvert dans plusieurs onglets sans
 // multiplier les appels a l'API Torn.
 const CACHE_MS = 20000;
 
-function createApp(coach) {
+function createApp(coach, sweeper = null) {
   const app = express();
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -44,6 +45,11 @@ function createApp(coach) {
     }
   });
 
+  app.get('/api/market', (req, res) => {
+    if (!sweeper) return res.status(503).json({ error: 'Balayage du marche non demarre.' });
+    res.json(sweeper.state);
+  });
+
   app.get('/api/report', (req, res) => {
     const days = Number(req.query.days || 7);
     res.json(coach.tracker.report(Date.now() - days * 24 * 3600 * 1000));
@@ -56,9 +62,18 @@ function start() {
   loadEnv();
   const config = readConfig();
   const coach = new Coach(config);
-  const app = createApp(coach);
+  const sweeper = new MarketSweeper(coach.api);
+  const app = createApp(coach, sweeper);
+
   app.listen(config.dashboardPort, '127.0.0.1', () => {
-    process.stdout.write(`\n  Dashboard Torn : http://127.0.0.1:${config.dashboardPort}\n\n`);
+    const base = `http://127.0.0.1:${config.dashboardPort}`;
+    process.stdout.write(`\n  Dashboard Torn  : ${base}\n  Affaires marche : ${base}/market.html\n\n`);
+  });
+
+  // Le balayage demarre avec le serveur : la page a des donnees des la
+  // premiere visite plutot qu'un tableau vide.
+  sweeper.start().catch((err) => {
+    process.stderr.write(`  ! Balayage du marche indisponible : ${err.message}\n`);
   });
 }
 

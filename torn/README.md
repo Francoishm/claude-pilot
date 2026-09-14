@@ -124,6 +124,54 @@ la **qualité** de tes attaques, qui est la vraie variable d'optimisation :
 `--enrich` va chercher le niveau des défenseurs profil par profil, plafonné par
 `maxEnrichLookups` pour ne pas transformer une analyse en centaines de requêtes.
 
+## Page des affaires du marché
+
+```bash
+npm run torn:dashboard     # puis http://127.0.0.1:3100/market.html
+```
+
+Un tableau vivant de toutes les annonces sous-cotées du jeu, triées par marge
+totale, avec un bouton **Acheter** par ligne qui ouvre l'objet sur Torn. Le
+balayage démarre avec le serveur et tourne en boucle.
+
+### La marge réelle n'est pas la remise affichée
+
+Depuis juin 2025, l'Item Market prélève une **taxe de vente de 5 %**. Sur un
+achat à −20 % revendu à la valeur de marché :
+
+| | Calcul | Résultat |
+|---|---|---|
+| Achat | 0,80 × valeur | −800 000 |
+| Revente | 1,00 × valeur | +1 000 000 |
+| Taxe 5 % | −0,05 × vente | −50 000 |
+| **Net** | | **+150 000, soit 15 %** |
+
+Le seuil de rentabilité est donc à **−5 %**, pas à 0. Le tableau affiche la
+remise brute *et* la marge nette après taxe — c'est la seconde qui compte.
+`sellUndercutPercent` permet en plus de modéliser le fait qu'il faut souvent
+passer sous la valeur de marché pour revendre vite.
+
+### Pourquoi un balayage en boucle et non un scan unique
+
+**Il n'existe pas d'endpoint listant toutes les annonces du jeu.** Chaque objet
+demande sa propre requête, et Torn plafonne à 100 requêtes/minute par joueur
+pour ~900 objets — soit une dizaine de minutes par cycle complet. Plutôt que de
+te faire attendre, le balayage tourne en continu : les affaires apparaissent au
+fil de l'eau et sont réévaluées à chaque passage. `minMarketValue` restreint le
+balayage aux objets où une marge vaut une requête.
+
+Trois garde-fous, appliqués dans le code :
+
+- une affaire **disparue est retirée** du tableau au passage suivant, au lieu de
+  rester affichée comme une annonce fantôme ;
+- `staleSeconds` purge les entrées qu'aucun passage récent n'a confirmées ;
+- **`market_value` est une moyenne glissante.** Une remise de 30 % peut être une
+  bonne affaire ou un prix qui vient de s'effondrer — auquel cas ta revente ne
+  trouvera pas preneur au prix espéré. C'est le vrai risque de cette stratégie.
+
+L'achat reste manuel : l'API n'expose aucun endpoint d'achat, et piloter le site
+pour cliquer à ta place est un motif de bannissement.
+
 ## Trouver des cibles (niveau élevé, stats faibles)
 
 **Les battle stats d'autrui sont des données privées.** Aucune clé API, quel que
@@ -227,6 +275,7 @@ entier, l'XP arrive amputée. C'est exactement ce que `attacks` détecte.
 - [Fair Fight Explained — FFScouter](https://ffscouter.com/guides/fair-fight-explained)
 - [Estimating opponent's stats from attacks — forums Torn](https://www.torn.com/forums.php?p=threads&f=61&t=16209964)
 - [Rank — wiki officiel](https://wiki.torn.com/wiki/Rank)
+- [Item Market — wiki officiel](https://wiki.torn.com/wiki/Item_Market) (taxe de vente de 5 % depuis juin 2025)
 - [API key levels and safety — FFScouter](https://ffscouter.com/guides/api-keys) (les battle stats d'autrui sont privées)
 
 Pour les chiffres (régen par tick, cooldowns, temps avant saturation), lis-les

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torn — Affaires du marché</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#0e1013; --panel:#171a1f; --line:#262b33;
+    --text:#e6e8ea; --muted:#8b939e;
+    --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --accent:#60a5fa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  main{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:19px;margin:0;font-weight:650}
+  .muted{color:var(--muted);font-size:13px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  .progress{height:6px;border-radius:999px;background:#0b0d10;overflow:hidden;margin:10px 0 4px}
+  .progress > div{height:100%;background:var(--accent);transition:width .5s ease}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:hover{background:#1c2027}
+  .good{color:var(--ok);font-weight:600}
+  .mid{color:var(--warn);font-weight:600}
+  a.buy{display:inline-block;padding:5px 11px;border-radius:7px;background:var(--accent);
+        color:#08101d;font-weight:650;text-decoration:none;font-size:13px}
+  a.buy:hover{filter:brightness(1.12)}
+  .warn{border-left:3px solid var(--warn);padding-left:12px}
+  .err{color:var(--bad)}
+  .empty{padding:28px 14px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Affaires du marché</h1>
+    <span class="muted" id="meta">démarrage…</span>
+  </header>
+  <div class="panel" id="scan">
+    <div class="muted" id="scanline">Chargement du catalogue…</div>
+    <div class="progress"><div id="bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="panel warn muted" id="caveat"></div>
+
+  <div class="panel" style="padding:0">
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th>Objet</th><th>Prix</th><th>Valeur marché</th><th>Remise</th>
+          <th>Marge nette/u</th><th>Qté</th><th>Marge totale</th><th>Vu</th><th></th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="9" class="empty">Aucune affaire pour l’instant.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ago = (ms) => {
+  const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h';
+};
+
+function render(state) {
+  const pct = state.itemCount ? Math.round((state.scannedThisCycle / state.itemCount) * 100) : 0;
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('scanline').innerHTML =
+    `Balayage ${state.scannedThisCycle}/${state.itemCount} objets · cycle ${state.cycles + 1}` +
+    (state.lastError ? ` · <span class="err">${esc(state.lastError.message)}</span>` : '');
+
+  const c = state.config;
+  document.getElementById('caveat').innerHTML =
+    `Filtres : remise ≥ ${c.minDiscountPercent}%, marge nette ≥ ${c.minNetMarginPercent}%, ` +
+    `objets ≥ ${money(c.minMarketValue)}. La marge nette déduit la taxe de vente de ${c.salesFeePercent}%.<br>` +
+    `<strong>La « valeur marché » est une moyenne glissante</strong> : une forte remise peut signaler ` +
+    `une bonne affaire comme un prix qui vient de s’effondrer. Une annonce vue il y a plusieurs ` +
+    `minutes peut déjà être partie — l’achat se fait à la main sur Torn.`;
+
+  document.getElementById('meta').textContent =
+    state.opportunities.length + ' affaire(s) · maj ' + new Date().toLocaleTimeString();
+
+  const rows = document.getElementById('rows');
+  if (state.opportunities.length === 0) {
+    rows.innerHTML = '<tr><td colspan="9" class="empty">Aucune affaire au-dessus des seuils pour l’instant.</td></tr>';
+    return;
+  }
+
+  rows.innerHTML = state.opportunities.map((o) => {
+    const cls = o.netMarginPercent >= 25 ? 'good' : 'mid';
+    const url = 'https://www.torn.com/imarket.php#/p=shop&step=shop&type=&searchname=' + encodeURIComponent(o.name);
+    return `<tr>
+      <td>${esc(o.name)} <span class="muted">${esc(o.source)}</span></td>
+      <td>${money(o.cost)}</td>
+      <td class="muted">${money(o.marketValue)}</td>
+      <td class="${cls}">−${o.discountPercent}%</td>
+      <td class="${cls}">${money(o.profitPerUnit)} <span class="muted">(${o.netMarginPercent}%)</span></td>
+      <td>${o.affordable}/${o.quantity}</td>
+      <td class="${cls}">${money(o.totalProfit)}</td>
+      <td class="muted">${ago(o.foundAt)}</td>
+      <td><a class="buy" href="${url}" target="_blank" rel="noopener">Acheter</a></td>
+    </tr>`;
+  }).join('');
+}
+
+async function tick() {
+  try {
+    const res = await fetch('api/market');
+    const state = await res.json();
+    if (state.error) throw new Error(state.error);
+    render(state);
+  } catch (err) {
+    document.getElementById('scanline').innerHTML = '<span class="err">' + esc(err.message) + '</span>';
+  }
+}
+
+tick();
+setInterval(tick, 8000);
+</script>
+</body>
+</html>
