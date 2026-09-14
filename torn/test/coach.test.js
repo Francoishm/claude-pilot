@@ -114,3 +114,41 @@ test('le dashboard renvoie 502 quand l’API Torn echoue', async () => {
     server.close();
   }
 });
+
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { loadEnv } = require('../src/coach');
+const { isPubliclyBound } = require('../src/dashboard');
+
+test('readConfig ecoute sur localhost par defaut', () => {
+  assert.equal(readConfig({ TORN_API_KEY: 'K' }).dashboardHost, '127.0.0.1');
+  assert.equal(readConfig({ TORN_API_KEY: 'K', TORN_DASHBOARD_HOST: '0.0.0.0' }).dashboardHost, '0.0.0.0');
+});
+
+test('isPubliclyBound distingue une ecoute locale d’une ecoute reseau', () => {
+  for (const local of ['127.0.0.1', 'localhost', '::1']) assert.equal(isPubliclyBound(local), false);
+  for (const open of ['0.0.0.0', '192.168.1.10', '::']) assert.equal(isPubliclyBound(open), true);
+});
+
+test('loadEnv prefere le .env du sous-projet a celui de la racine', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'torn-env-'));
+  const local = path.join(dir, 'local.env');
+  const root = path.join(dir, 'root.env');
+  fs.writeFileSync(local, 'TORN_TEST_MARKER=local\n');
+  fs.writeFileSync(root, 'TORN_TEST_MARKER=root\n');
+
+  assert.equal(loadEnv([local, root]), local);
+  assert.equal(process.env.TORN_TEST_MARKER, 'local');
+
+  delete process.env.TORN_TEST_MARKER;
+  assert.equal(loadEnv([path.join(dir, 'absent.env'), root]), root, 'repli sur la racine');
+  assert.equal(process.env.TORN_TEST_MARKER, 'root');
+
+  delete process.env.TORN_TEST_MARKER;
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('loadEnv ne plante pas quand aucun .env n’existe', () => {
+  assert.equal(loadEnv(['/nexiste/pas/.env']), null);
+});

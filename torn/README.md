@@ -15,6 +15,49 @@ régénération gaspillée. Sur Torn, l'XP vient des crimes (nerve) et des attaq
 perdue pour toujours. Le coach surveille tes barres, t'alerte au bon moment, et
 te dit quoi faire en priorité.
 
+## Déploiement sur un serveur
+
+```bash
+git clone <ce-depot> && cd <depot>/torn
+cp .env.example .env && $EDITOR .env      # renseigne TORN_API_KEY
+sudo ./deploy/install.sh
+```
+
+Le script est idempotent : le relancer met à jour le code et redémarre le
+service. Il vérifie Node ≥ 18, exige un `.env` avec une clé non vide, restreint
+ce fichier en `600`, installe les dépendances de production, lance la suite de
+tests, puis installe et démarre une unité systemd.
+
+`torn/` est un **sous-projet autonome** avec son propre `package.json` : il ne
+dépend que d'`express` et `dotenv`. C'est délibéré — le projet racine embarque
+`node-pty`, une dépendance native qui exige une chaîne de compilation C++ et
+casserait l'installation sur un serveur nu, alors qu'elle n'a aucune utilité ici.
+
+### Accès à la page depuis ton poste
+
+Le service écoute sur **127.0.0.1 uniquement**, parce que la page n'a *aucune
+authentification* et affiche tes données de compte. Passe par un tunnel SSH :
+
+```bash
+ssh -N -L 3100:127.0.0.1:3100 <user>@<serveur>
+# puis http://127.0.0.1:3100/market.html
+```
+
+`TORN_DASHBOARD_HOST` permet d'élargir l'écoute si tu sais ce que tu fais — le
+service affiche alors un avertissement au démarrage. Ne l'expose pas sur une
+interface publique sans mettre une authentification devant.
+
+### Exploitation
+
+```bash
+journalctl -u torn-coach -f          # journal en direct
+sudo systemctl restart torn-coach    # redémarrer
+sudo systemctl disable --now torn-coach   # arrêter et désactiver
+```
+
+L'unité redémarre sur échec avec 10 s d'attente, et abandonne après 5 échecs en
+5 minutes — un redémarrage en boucle consommerait le quota API pour rien.
+
 ## Installation
 
 ```bash

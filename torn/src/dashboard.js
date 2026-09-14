@@ -65,9 +65,19 @@ function start() {
   const sweeper = new MarketSweeper(coach.api);
   const app = createApp(coach, sweeper);
 
-  app.listen(config.dashboardPort, '127.0.0.1', () => {
-    const base = `http://127.0.0.1:${config.dashboardPort}`;
-    process.stdout.write(`\n  Dashboard Torn  : ${base}\n  Affaires marche : ${base}/market.html\n\n`);
+  const host = config.dashboardHost;
+  app.listen(config.dashboardPort, host, () => {
+    const base = `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${config.dashboardPort}`;
+    process.stdout.write(`\n  Dashboard Torn  : ${base}\n  Affaires marche : ${base}/market.html\n`);
+    if (isPubliclyBound(host)) {
+      process.stdout.write(
+        `\n  ATTENTION : ecoute sur ${host}, donc joignable depuis le reseau.\n` +
+        `  Cette page n'a AUCUNE authentification et affiche tes donnees de compte.\n` +
+        `  Prefere l'ecoute locale + un tunnel SSH :\n` +
+        `    ssh -N -L ${config.dashboardPort}:127.0.0.1:${config.dashboardPort} <user>@<serveur>\n`
+      );
+    }
+    process.stdout.write('\n');
   });
 
   // Le balayage demarre avec le serveur : la page a des donnees des la
@@ -86,4 +96,9 @@ if (require.main === module) {
   }
 }
 
-module.exports = { createApp, CACHE_MS };
+/** Une ecoute hors boucle locale expose la page au reseau. */
+function isPubliclyBound(host) {
+  return host !== '127.0.0.1' && host !== 'localhost' && host !== '::1';
+}
+
+module.exports = { createApp, isPubliclyBound, CACHE_MS };

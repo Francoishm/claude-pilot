@@ -2,6 +2,7 @@
 
 /** Assemblage : config d'environnement + API + instantane + conseils. */
 
+const fs = require('fs');
 const path = require('path');
 const { TornApi } = require('./api');
 const { buildSnapshot } = require('./snapshot');
@@ -9,8 +10,22 @@ const { advise } = require('./advisor');
 const { Tracker } = require('./tracker');
 const { Notifier } = require('./notify');
 
-function loadEnv() {
-  require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+/**
+ * Cherche le .env a cote du sous-projet d'abord, puis a la racine du depot.
+ * Un deploiement autonome n'a que torn/ ; un poste de dev a souvent le .env
+ * a la racine. Les deux doivent marcher sans configuration supplementaire.
+ */
+function loadEnv(candidates = [
+  path.join(__dirname, '..', '.env'),
+  path.join(__dirname, '..', '..', '.env'),
+]) {
+  for (const file of candidates) {
+    if (fs.existsSync(file)) {
+      require('dotenv').config({ path: file });
+      return file;
+    }
+  }
+  return null;
 }
 
 /** Lit la configuration depuis l'environnement, sans jamais logger la cle. */
@@ -26,6 +41,9 @@ function readConfig(env = process.env) {
     base: env.TORN_API_BASE || undefined,
     webhookUrl: env.TORN_DISCORD_WEBHOOK || null,
     dashboardPort: Number(env.TORN_DASHBOARD_PORT || 3100),
+    // Localhost par defaut : la page expose des donnees de compte et n'a
+    // aucune authentification. Elargir l'ecoute est un choix explicite.
+    dashboardHost: env.TORN_DASHBOARD_HOST || '127.0.0.1',
   };
 }
 
